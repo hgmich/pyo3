@@ -2,32 +2,31 @@ use std::borrow::Cow;
 use std::fmt::Debug;
 
 use proc_macro2::{Ident, Span, TokenStream};
-use quote::{format_ident, quote, quote_spanned, ToTokens};
+use quote::{ToTokens, format_ident, quote, quote_spanned};
 use syn::ext::IdentExt;
 use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
-use syn::{parse_quote, parse_quote_spanned, spanned::Spanned, ImplItemFn, Result, Token};
+use syn::{ImplItemFn, Result, Token, parse_quote, parse_quote_spanned, spanned::Spanned};
 
+use crate::PyFunctionOptions;
 use crate::attributes::kw::frozen;
 use crate::attributes::{
-    self, kw, take_pyo3_options, CrateAttribute, ErrorCombiner, ExtendsAttribute,
-    FreelistAttribute, ModuleAttribute, NameAttribute, NameLitStr, RenameAllAttribute,
-    StrFormatterAttribute,
+    self, CrateAttribute, ErrorCombiner, ExtendsAttribute, FreelistAttribute, ModuleAttribute,
+    NameAttribute, NameLitStr, RenameAllAttribute, StrFormatterAttribute, kw, take_pyo3_options,
 };
 #[cfg(feature = "experimental-inspect")]
 use crate::introspection::class_introspection_code;
 use crate::konst::{ConstAttributes, ConstSpec};
 use crate::method::{FnArg, FnSpec, PyArg, RegularArg};
 use crate::pyfunction::ConstructorAttribute;
-use crate::pyimpl::{gen_py_const, get_cfg_attributes, PyClassMethodsType};
+use crate::pyimpl::{PyClassMethodsType, gen_py_const, get_cfg_attributes};
 use crate::pymethod::{
-    impl_py_class_attribute, impl_py_getter_def, impl_py_setter_def, MethodAndMethodDef,
-    MethodAndSlotDef, PropertyType, SlotDef, __GETITEM__, __HASH__, __INT__, __LEN__, __REPR__,
-    __RICHCMP__, __STR__,
+    __GETITEM__, __HASH__, __INT__, __LEN__, __REPR__, __RICHCMP__, __STR__, MethodAndMethodDef,
+    MethodAndSlotDef, PropertyType, SlotDef, impl_py_class_attribute, impl_py_getter_def,
+    impl_py_setter_def,
 };
 use crate::pyversions::is_abi3_before;
-use crate::utils::{self, apply_renaming_rule, Ctx, LitCStr, PythonDoc};
-use crate::PyFunctionOptions;
+use crate::utils::{self, Ctx, LitCStr, PythonDoc, apply_renaming_rule};
 
 /// If the class is derived from a Rust `struct` or `enum`.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -815,6 +814,7 @@ fn implement_py_formatting(
                 .iter()
                 .map(|member| quote! {self.#member})
                 .collect::<Vec<TokenStream>>();
+
             let fmt_impl: ImplItemFn = syn::parse_quote! {
                 fn __pyo3__generated____str__(&self) -> ::std::string::String {
                     ::std::format!(#fmt, #(#args, )*)
@@ -1164,7 +1164,7 @@ fn impl_complex_enum_variant_match_args(
     field_names: &[Ident],
 ) -> syn::Result<(MethodAndMethodDef, syn::ImplItemFn)> {
     let ident = format_ident!("__match_args__");
-    let field_names_unraw: Vec<_> = field_names.iter().map(|name| name.unraw()).collect();
+    let field_names_unraw = field_names.iter().map(|name| name.unraw());
     let mut match_args_impl: syn::ImplItemFn = {
         parse_quote! {
             #[classattr]
